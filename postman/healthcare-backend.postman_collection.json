@@ -1,0 +1,285 @@
+{
+  "info": {
+    "name": "Healthcare Backend",
+    "description": "All API endpoints of the healthcare backend. Run \"Register\" or \"Login\" first: they save the access token, and every other request uses it automatically. Create requests save the new ids (patientId, doctorId, mappingId) for the requests after them.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" },
+    { "key": "email", "value": "asha@example.com" },
+    { "key": "password", "value": "Str0ngPass!9" },
+    { "key": "access", "value": "" },
+    { "key": "refresh", "value": "" },
+    { "key": "patientId", "value": "" },
+    { "key": "doctorId", "value": "" },
+    { "key": "mappingId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('access', body.access);",
+              "pm.collectionVariables.set('refresh', body.refresh);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Asha\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/register/"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('access', body.access);",
+              "pm.collectionVariables.set('refresh', body.refresh);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login/"
+          }
+        },
+        {
+          "name": "Login - wrong password (401)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('401 unauthorized', () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"wrong-password\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login/"
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('access', pm.response.json().access);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh\": \"{{refresh}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/refresh/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Patients",
+      "item": [
+        {
+          "name": "Add patient",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 created', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('patientId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"age\": 45,\n  \"gender\": \"male\",\n  \"phone\": \"9876543210\",\n  \"address\": \"12 MG Road, Pune\",\n  \"medical_history\": \"Hypertension\"\n}" },
+            "url": "{{baseUrl}}/api/patients/"
+          }
+        },
+        {
+          "name": "Add patient - invalid data (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('400 bad request', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"age\": 200,\n  \"gender\": \"unknown\"\n}" },
+            "url": "{{baseUrl}}/api/patients/"
+          }
+        },
+        {
+          "name": "List my patients",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));"
+            ]}
+          }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/patients/" }
+        },
+        {
+          "name": "List patients - no token (401)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('401 unauthorized', () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/patients/" }
+        },
+        {
+          "name": "Get patient",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/patients/{{patientId}}/" }
+        },
+        {
+          "name": "Update patient (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"age\": 46,\n  \"gender\": \"male\",\n  \"phone\": \"9876543210\",\n  \"address\": \"14 MG Road, Pune\",\n  \"medical_history\": \"Hypertension, Diabetes\"\n}" },
+            "url": "{{baseUrl}}/api/patients/{{patientId}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Doctors",
+      "item": [
+        {
+          "name": "Add doctor",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 created', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('doctorId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Dr. Meera Shah\",\n  \"specialization\": \"Cardiology\",\n  \"phone\": \"9123456780\",\n  \"email\": \"meera.{{$timestamp}}@clinic.com\"\n}" },
+            "url": "{{baseUrl}}/api/doctors/"
+          }
+        },
+        {
+          "name": "List doctors",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/doctors/" }
+        },
+        {
+          "name": "Get doctor",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/doctors/{{doctorId}}/" }
+        },
+        {
+          "name": "Update doctor (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Dr. Meera Shah\",\n  \"specialization\": \"Interventional Cardiology\",\n  \"phone\": \"9123456780\"\n}" },
+            "url": "{{baseUrl}}/api/doctors/{{doctorId}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Mappings",
+      "item": [
+        {
+          "name": "Assign doctor to patient",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 created', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('mappingId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"patient\": {{patientId}},\n  \"doctor\": {{doctorId}}\n}" },
+            "url": "{{baseUrl}}/api/mappings/"
+          }
+        },
+        {
+          "name": "Assign same pair again (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('400 bad request', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"patient\": {{patientId}},\n  \"doctor\": {{doctorId}}\n}" },
+            "url": "{{baseUrl}}/api/mappings/"
+          }
+        },
+        {
+          "name": "List all mappings",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/mappings/" }
+        },
+        {
+          "name": "Doctors of a patient (id = patient id)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/mappings/{{patientId}}/" }
+        },
+        {
+          "name": "Remove doctor from patient (id = mapping id)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 no content', () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/mappings/{{mappingId}}/" }
+        }
+      ]
+    },
+    {
+      "name": "5. Cleanup",
+      "item": [
+        {
+          "name": "Delete doctor",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 no content', () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/doctors/{{doctorId}}/" }
+        },
+        {
+          "name": "Delete patient",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 no content', () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/patients/{{patientId}}/" }
+        }
+      ]
+    }
+  ]
+}
